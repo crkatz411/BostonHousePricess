@@ -1,0 +1,1182 @@
+---
+title: 'ASME House prices: Detailed EDA and Regression Techniques'
+author: "Chetana Katpally"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    highlight: tango
+    number_sections: yes
+    theme: paper
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment=NA)
+```
+#Executive Summary
+### Check for outliers in saleprice, and complete one-hot-encoding. Then delete the variables that were one-hot encoded
+#Introduction 
+
+## Competition description
+
+The description is at this link - https://www.kaggle.com/c/house-prices-advanced-regression-techniques
+
+# Exploratory Data Analysis
+
+## Loading required libraries
+
+Loading required libraries into R workspace
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+library(DataExplorer) #For data exploration 
+library(DescTools)
+library(psych)  # describe()
+library(plyr)
+library(rowr)
+library(corrplot) # For graphical correlations
+library(caret)
+library(Hmisc) # For correlation matrix 
+library(rlist)
+library(randomForest)
+library(e1071) # tune() for random forests
+```
+
+
+## Reading CSV's
+
+Reading the csv's as dataframes into R.
+
+```{r}
+setwd("/Users/chetanak/Box Sync/Projects/DataScience/R/house-prices-advanced-regression-techniques/")
+train <- read.csv("train.csv", stringsAsFactors = F)
+test <- read.csv("test.csv", stringsAsFactors = F)
+```
+
+## Data Description & Structure
+
+
+The test and train datasets have 1460 and 1459 rows each respectively. The test and train datasets have 81 and 80 columns each respectively. A difference in the columns variables across two data sets reveal absence of 'SalePrice' predictor variable in test data. An 'ID' column variable is present in each of the datasets. However, this column is not essential in prediction rather this column in test data set is required for submission. Hence, saving the 'test$ID' values to a vector 'test_ids' and eliminating the 'ID' column in both the datasets. We now bind the datasets for exploratory analysis. After binding, the combined data set contains 2919 and 80 columns. Of these 80, 79 are predictor variables and one is a response variable, which is 'SalePrice'
+
+* The data structure shows both character and integer variables with null values on a few of those variables 
+* The most of the character variables are ordinal factors, but I read them as strings for data cleaning. Post cleaning, we will see if converting any or all of these factors to integer is beneficial 
+
+
+
+```{r collapse=TRUE, comments=TRUE}
+dim(train)
+dim(test)
+setdiff(names(train), names(test))
+test_ids <- test$Id
+train$Id <- NULL
+test$Id <- NULL
+test$SalePrice <- NA
+df <- rbind(train, test)
+dim(df)
+str(df, list.len=10)
+```
+
+
+## Handling Missing Data, Factoring, Encoding {.tabset}
+
+### Prep Data Handling
+The best way to analyze each varaible is by grouping them under their respective category. After grouping the variabels I am going to,
+
+1. Handle missing data
+2. Factorize the required variables
+3. Encode variables as needed
+
+Subsequent tabs above are going detail the steps taken to handle missing data, factorizing, encoding of the variables. Below is the variable grouping and the missing counts in each variable
+
+```{r echo=TRUE}
+garage_vars <- names(df[which(names(df) %like% "%Garage%")])
+basement_vars <- names(df[which(names(df) %like% "%Bsmt%")])
+pool_vars <- names(df[which(names(df) %like% "%Pool%")])
+
+porch_vars <- names(df[which(names(df) %like% c("%Porch%", "%Deck%"))])
+
+sale_vars <- names(df[which(names(df) %like% c("%Sale%", "%Sold"))])
+
+lot_vars <- names(df[which(names(df) %like% c("%Lot%", "%Land%"))])
+
+dwelling_vars <- names(df[which(names(df) %like% c("%SubClass%", "%Bldg%", "%HouseStyle%", "%Overall%", "%Year%"))])
+
+exterior_vars <- names(df[which(names(df) %like% c("%Exter%", "%Roof%", "%MasVnr%", "%Foundation%", "%Street%", "%Alley%", "%PavedDrive%", "%Fence%"))])
+
+utility_vars <- names(df[which(names(df) %like% c("%Heat%", "%Utilities%", "%Central%", "%Electrical%"))])
+
+interior_vars <- names(df[which(names(df) %like% c("%Room%", "FullBath%", "HalfBath%", "%Kitchen%", "%Fire%", "%AbvGr%", "%Functional%", "%FlrSF%", "%LowQualFinSF%", "%GrLivArea%"))])
+
+misc_vars <- names(df[which(names(df) %like% c("%Misc%"))])
+
+zoning_vars <- names(df[which(names(df) %like% c("%Zoning%"))])
+
+neighborhood_vars <- names(df[which(names(df) %like% c("%Neighborhood%", "Condition%"))])
+
+
+vars_list = list(garage_vars, basement_vars, pool_vars, porch_vars, sale_vars, lot_vars, 
+                 dwelling_vars, exterior_vars, utility_vars, interior_vars, misc_vars, 
+                 zoning_vars, neighborhood_vars)
+
+df_var <- as.data.frame(do.call(cbind.fill, c(vars_list, fill = NA)))
+colnames(df_var) <-  c("GarageVars", "BasementVars", "PoolVars", "PorchVars", "SaleVars", "LotVars",
+                        "DwellingVars", "ExteriorVars", "UtilityVars", "InteriorVars", "MiscVars", 
+                        "ZomingVars", "NeighborhoodVars")
+df_var
+
+#Show the  missing value counts with their column names
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA
+
+```
+
+
+
+### Garage Variables
+
+There are 7 Garage variables, out of which GarageYrBlt, GarageFinish, GarageQual, GarageCond have 159 NA's, GarageType has 157 NA's, GarageCars and Garage Area have 1 NA each.
+
+```{r collapse=TRUE, comments='##'}
+df_NA[c(which(names(df_NA) %like% "Garage%"))]
+cbind(sapply(df[garage_vars], class))
+```
+
+First we need to check which of the 159 NA's in the variables are common with 157 NA's in GarageType
+
+```{r collapse=TRUE, comment='##'}
+
+length(which(is.na(df$GarageYrBlt) & is.na(df$GarageFinish) & is.na(df$GarageQual) & is.na(df$GarageCond)  & is.na(df$GarageType)))
+
+```
+
+There are 157 rows that are common across GarageYrBlt, GarageFinish, GarageQual, GarageCond, GarageType
+Let's fix the values for these variables by selecting the rows based on GarageType NA's since we know for sure that GarageType NA's are in the 159 NA's for other Garage variables. We assign the value 'None' to all NA's based on the variable description in the previous tab.
+```{r collapse=TRUE, comment='##'}
+df$GarageFinish[is.na(df$GarageType)] <- 'None'
+df$GarageQual[is.na(df$GarageType)] <- 'None'
+df$GarageCond[is.na(df$GarageType)] <- 'None'
+df$GarageYrBlt[is.na(df$GarageType)] <- 0   # Integer Variable
+df$GarageType[is.na(df$GarageType)] <- 'None'
+
+#Show the  missing value counts with their column names
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "Garage%"))]
+```
+
+Now we have 2 NA's in each GarageYrBlt, GarageFinish, GarageQual, GarageCond variables and 1 NA each in GarageCars and GarageArea
+
+
+```{r collapse=TRUE}
+kable(df[which(is.na(df$GarageYrBlt) | is.na(df$GarageFinish) | is.na(df$GarageQual) | is.na(df$GarageCond)), c("GarageYrBlt", "GarageFinish", "GarageQual", "GarageCond", "GarageCars", "GarageArea")])
+```
+
+Is is evident that row 2127 has a Garage since the GarageArea is 360 and row 2577 has none. Fixing row 2577 values as below by assigning 0 value to integer variables and 'None' to character variables
+
+```{r}
+df$GarageYrBlt[2577] <- 0
+df$GarageFinish[2577] <- 'None'
+df$GarageQual[2577] <- 'None'
+df$GarageCond[2577] <- 'None'
+df$GarageCars[2577] <- 0
+df$GarageArea[2577] <- 0
+df[2577, c("GarageYrBlt", "GarageFinish", "GarageQual", "GarageCond", "GarageCars", "GarageArea")]
+```
+
+Let us fix row 2127 for these variables. For GarageYrBlt variable, I will impute the YearBuild value. For other values I will impute with mode (the most frequent value) in the respective column
+
+```{r collapse=TRUE, comment='##'}
+df$GarageYrBlt[2127] <- df$YearBuilt[2127]
+df$GarageFinish[2127] <- names(sort(table(df$GarageFinish), decreasing=TRUE)[1])
+df$GarageQual[2127] <- names(sort(table(df$GarageQual), decreasing=TRUE)[1])
+df$GarageCond[2127] <- names(sort(table(df$GarageCond), decreasing=TRUE)[1])
+df[2127, c("GarageYrBlt", "GarageFinish", "GarageQual", "GarageCond", "GarageCars", "GarageArea")]
+
+#Show the  missing value counts with their column names
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "Garage%"))]
+
+```
+
+Now, that all the NA's are handled, I am going to evaluate the character variables. We have 4 character variables. Of these there are 3 ordered/ordinal variables (GarageFinish, GarageQual, GarageCond) and 1 unordered/multinomial (GarageType). 
+
+```{r}
+table(df$GarageType)
+table(df$GarageFinish)
+table(df$GarageQual)
+table(df$GarageCond)
+```
+
+I will convert GarageType to a factor since it does not have specific ordering to its values. I will assign numerical values to other character variables and convert them to Numeric type. I will decide later if I should treat ordinal variables as numeric or convert them to factors
+
+```{r}
+df$GarageType <- factor(df$GarageType)
+df$GarageFinish <- as.numeric(revalue(df$GarageFinish, c("None"=0, "Unf"=1, "RFn"=2, "Fin"=3)))
+df$GarageQual <- as.numeric(revalue(df$GarageQual, c("None"=0, "Po"=1, "Fa"=2, "TA"=3, "Gd"=4, "Ex"=5)))
+df$GarageCond <- as.numeric(revalue(df$GarageCond, c("None"=0, "Po"=1, "Fa"=2, "TA"=3, "Gd"=4, "Ex"=5)))
+table(df$GarageType)
+table(df$GarageFinish)
+table(df$GarageQual)
+table(df$GarageCond)
+```
+
+
+### Basement Variables 
+
+
+There are 11 Basement variables and all of them have NA's. 
+```{r}
+df_NA[c(which(names(df_NA) %like% "%Bsmt%"))]
+```
+
+Among these variables I am going to figure out which of the variables BsmtCond, BsmtExposure, BsmtQual, BsmtFinType2 have commond NA row values with BsmtFinType1
+
+```{r}
+length(which(is.na(df$BsmtCond) & is.na(df$BsmtExposure) & is.na(df$BsmtQual) & is.na(df$BsmtFinType2)  & is.na(df$BsmtFinType1)))
+```
+
+There are 79 rows that common across BsmtCond, BsmtExposure, BsmtQual, BsmtFinType2 and BsmtFinType1. Let's fix the values for these variables by selecting the rows based on BsmtFinType1 NA's since we know for sure that BsmtFinType1 NA's are in the 82,81,80 NA's for other Basement variables. We assign the value 'None' to all NA's based on the variable description.
+```{r}
+df$BsmtCond[is.na(df$BsmtFinType1)] <- 'None'
+df$BsmtExposure[is.na(df$BsmtFinType1)] <- 'None'
+df$BsmtQual[is.na(df$BsmtFinType1)] <- 'None'
+df$BsmtFinType2[is.na(df$BsmtFinType1)] <- 'None'
+df$BsmtFinType1[is.na(df$BsmtFinType1)] <- 'None'
+
+#Show the  missing value counts with their column names
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "%Bsmt%"))]
+```
+
+Now we have 3 NA's in each BsmtCond, BsmtExposure, 2 NA's each in BsmtQual, BsmtFullBath BsmtHalfBath and 1 NA each in BsmtFinSF1, BsmtFinType2, BsmtFinSF2, BsmtUnfSF, and TotalBsmtSF
+
+
+```{r}
+kable(df[which(is.na(df$BsmtCond) | is.na(df$BsmtExposure) | is.na(df$BsmtQual) | is.na(df$BsmtFullBath) | is.na(df$BsmtHalfBath) | is.na(df$BsmtFinSF1) | is.na(df$BsmtFinType2) | is.na(df$BsmtFinSF2) | is.na(df$BsmtUnfSF) | is.na(df$TotalBsmtSF)), c("BsmtCond", "BsmtExposure", "BsmtQual", "BsmtFullBath", "BsmtHalfBath","BsmtFinSF1", "BsmtFinType2", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF")])
+```
+
+The output above indicates,
+
+* Row 333 has 1 NA value for BsmtFinType2. I will impute it with a mode value
+* Rows 949, 1488, 2349 have 1 NA each for BsmtExposure. I will impute with mode value
+* Rows 2041, 2186, 2525 have 1 NA each for BsmtCond. I will impute with mode value
+* Rows 2121 and 2189 have no basement and will impute the integer variables with 0 for BsmtFullBath, BsmtHalfBath,BsmtFinSF1,BsmtFinSF2, BsmtUnfSF, TotalBsmtSF
+* Rows 2218, 2219 have 1 NA each for BsmtQual. I will impute with mode value
+
+```{r}
+df$BsmtFinType2[333] <- names(sort(table(df$BsmtFinType2), decreasing=TRUE))[1]
+df$BsmtExposure[c(949,1488,2349)] <- names(sort(table(df$BsmtExposure), decreasing=TRUE))[1]
+df$BsmtCond[c(2041,2186,2525)] <- names(sort(table(df$BsmtCond), decreasing=TRUE))[1]
+df$BsmtFullBath[c(2121,2189)] <- 0
+df$BsmtHalfBath[c(2121,2189)] <- 0
+df[2121, c("BsmtFinSF1", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF")] <- 0
+df$BsmtQual[c(2218,2219)] <- names(sort(table(df$BsmtQual), decreasing=TRUE))[1]
+```
+
+Test if the NA's are handled
+
+```{r}
+kable(df[c(333,949,1488,2041,2121,2186,2189,2218,2219,2349,2525), c("BsmtCond", "BsmtExposure", "BsmtQual", "BsmtFullBath", "BsmtHalfBath","BsmtFinSF1", "BsmtFinType2", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF")])
+```
+
+There are 5 character Basement variables, 3 of which are ordered (BsmtQual, BsmtCond, BsmtExposure) and 2 of which are unordered (BsmtFinType1, BsmtFinType2). I will convert the unordered variables to factors and assign numeric values to ordered varaibles and convert them to numeric types.
+
+```{r}
+cbind(sapply(df[basement_vars], class))
+table(df$BsmtQual)
+table(df$BsmtCond)
+table(df$BsmtExposure)
+table(df$BsmtFinType1)
+table(df$BsmtFinType2)
+df$BsmtFinType1 <- as.factor(df$BsmtFinType1)
+df$BsmtFinType2 <- as.factor(df$BsmtFinType2)
+df$BsmtQual <-  as.integer(revalue(df$BsmtQual, c("None"=0, "Fa"=1, "TA"=2, "Gd"=3, "Ex"=4)))
+df$BsmtCond <-  as.integer(revalue(df$BsmtCond, c("None"=0, "Po"=1, "Fa"=2, "TA"=3, "Gd"=4)))
+df$BsmtExposure <-  as.integer(revalue(df$BsmtExposure, c("None"=0, "No"=1, "Mn"=2, "Av"=3, "Gd"=4)))
+table(df$BsmtQual)
+table(df$BsmtCond)
+table(df$BsmtExposure)
+table(df$BsmtFinType1)
+table(df$BsmtFinType2)
+```
+
+### Pool Variables 
+There are 2 pool variables and only variable PoolQC have 2909 NA's.
+
+```{r}
+df_NA[c(which(names(df_NA) %like% pool_vars))]
+
+
+```
+
+For variable PoolQC, based on the description I am going to replace NA's with None if the PoolArea is 0. It appears that there are 2906 PoolQA NA's since there are 2906 PoolArea values with 0. 
+
+```{r}
+df$PoolQC[df$PoolArea==0]  <- 'None'
+#Show the  missing value counts with their column names
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "%Pool%"))]
+df[(is.na(df$PoolQC)), c("PoolQC", "PoolArea")]
+```
+
+We need to find the 3 missing PoolQC NA's and their respective PoolArea values. Rows 2421, 2504, 2600 have PoolArea values but the PoolQC is missing.  The NA values will be imputed with the mode
+
+```{r}
+df$PoolQC[c(2421,2504,2600)] <- names(sort(table(df$PoolQC), decreasing=TRUE))[2]
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "%Pool%"))]
+df$PoolQC[c(2421,2504,2600)]
+```
+
+There is 1 Pool ordinal character variable and I will assign numeric values and convert it to integer type. 
+
+```{r}
+cbind(sapply(df[pool_vars], class))
+table(df$PoolQC)
+df$PoolQC <-  as.integer(revalue(df$PoolQC, c("None"=0, "Fa"=1, "Gd"=2, "Ex"=3)))
+table(df$PoolQC)
+```
+###Porch Variables
+
+There are 5 porch variables and no NA's
+
+**WoodDeckSF: Wood deck area in square feet**
+
+**OpenPorchSF: Open porch area in square feet**
+
+**EnclosedPorch: Enclosed porch area in square feet**
+
+**3SsnPorch: Three season porch area in square feet**
+
+**ScreenPorch: Screen porch area in square feet**
+
+There are 5 integer porch variables and no NA's.
+
+```{r}
+
+df_NA[c(which(names(df_NA) %like% porch_vars))]
+cbind(sapply(df[porch_vars], class))
+
+```
+
+
+### Sale Variables 
+
+
+There are 4 sale variables out of which SalePrice and SaleType have NA's. The 1459 NA's in SalePrice are due to the addition of missing 'SalePrice' column with NA's assigned in test data that we need to predict. 
+
+```{r}
+df_NA[c(which(names(df_NA) %like% sale_vars))]
+```
+
+For SaleType 'NA' values, I will impute with the mode value. There are 2 character  variables, 'SaleType' and 'SaleCondition'. Both the character variables are unordered and will convert them to factors
+
+```{r}
+df$SaleType[is.na(df$SaleType)] <- names(sort(table(df$SaleType), decreasing=TRUE))[1]
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "%Sale%"))]
+cbind(sapply(df[sale_vars], class))
+table(df$SaleType)
+table(df$SaleCondition)
+df$SaleType <- as.factor(df$SaleType)
+df$SaleCondition <- as.factor(df$SaleCondition)
+```
+
+### Lot and Land Variables  
+
+
+There are 6 variables related to Lot and Land. Variable 'LotFrontage' has 486 NA's.
+
+```{r}
+df_NA[c(which(names(df_NA) %like% lot_vars))]
+cbind(sapply(df[lot_vars], class))
+```
+
+The NA's for the LotFrontage will be imputed with median value per Neighborhood variable since the values will be within bounds, while imputing with median can make the data look normally distributed. 
+
+```{r}
+lot_agg_median <- aggregate(list("LotFrontage_median"=df$LotFrontage), by=list("Neighborhood"=df$Neighborhood), FUN=median, na.rm=TRUE)
+lot_agg_median
+barplot(lot_agg_median$LotFrontage, names.arg=lot_agg_median$Neighborhood, main="Median LotFrontage by Neighborhood", xlab="Neighborhoods", ylab="Median Lot Frontage", col="blue")
+
+
+for (i in 1:nrow(df)){
+  if(is.na(df$LotFrontage[i])){
+    df$LotFrontage[i] <- as.integer(median(df$LotFrontage[df$Neighborhood==df$Neighborhood[i]], na.rm=TRUE))
+  }
+}
+
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% "%Lot%"))]
+```
+
+There are 4 character variables. LotConfig and LandContour variables look like unordered varaibles and will convert them to factors. LotShape and LandSlope have ordinal values hence will assign numeric values and convert them to numeric variables
+
+```{r}
+table(df$LotShape)
+table(df$LandContour)
+table(df$LotConfig)
+table(df$LandSlope)
+df$LotConfig <- as.factor(df$LotConfig)
+df$LandContour <- as.factor(df$LandContour)
+df$LotShape <- as.numeric(revalue(df$LotShape, c('IR3'=0, 'IR2'=1, 'IR1'=2, 'Reg'=3)))
+df$LandSlope <- as.numeric(revalue(df$LandSlope, c('Sev'=0, 'Mod'=1, 'Gtl'=2)))
+table(df$LotShape)
+table(df$LandContour)
+table(df$LotConfig)
+table(df$LandSlope)
+                           
+```
+
+### Dwelling Variables 
+
+There are 7 Dwelling varaibles with no NA's. There are 2 character variables that are unordered hence I will convert them to factors. 'MSSubClass' is an integer variable that should be converted into a factor. Based on the description, it identifies the type of dwelling involved in the sale. It is coded numerically and is an unordered variable.
+
+```{r}
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% dwelling_vars))]
+cbind(sapply(df[dwelling_vars], class))
+table(df$BldgType)
+table(df$HouseStyle)
+df$BldgType <- as.factor(df$BldgType)
+df$HouseStyle <- as.factor(df$HouseStyle)
+df$MSSubClass <- as.factor(as.character(df$MSSubClass))
+cbind(sapply(df[dwelling_vars], class))
+```
+
+### Exterior Features 
+
+There are 13 exterior variables out of which 12 are character variables
+
+```{r}
+# NA's for the exterior variables
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% exterior_vars))]
+cbind(sapply(df[exterior_vars], class))
+```
+
+Fixing 'Alley' and 'Fence' variables
+```{r}
+df$Alley[is.na(df$Alley)] <- 'None'
+df$Fence[is.na(df$Fence)] <- 'None'
+df[is.na(df$MasVnrType), c("MasVnrType", "MasVnrArea")]
+```
+
+It is evident that row 2611 has MasVnrArea and a missing MasVnrType. I am going to impute the 'NA' with a mode (excluding 'None' if it is the most frequent).
+
+```{r}
+df$MasVnrType[is.na(df$MasVnrArea)] <- 'None'
+df$MasVnrArea[is.na(df$MasVnrArea)] <- 0
+df[2611, "MasVnrType"] <- names(sort(table(df$MasVnrType), decreasing=TRUE))[2]
+df[2611, c("MasVnrType", "MasVnrArea")]
+
+df[which(is.na(df$Exterior1st) | is.na(df$Exterior2nd)), c("Exterior1st", "Exterior2nd")]
+df$Exterior1st[is.na(df$Exterior1st)] <- names(sort(-table(df$Exterior1st)))[1]
+df$Exterior2nd[is.na(df$Exterior2nd)] <- names(sort(-table(df$Exterior2nd)))[1]
+
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% c("%Exter%", "%Roof%", "%MasVnr%", "%Foundation%", "%Street%", "%Alley%", "%PavedDrive%", "%Fence%")))]
+```
+
+Variables 'Street', 'Alley', 'RoofStyle', 'RoofMatl', 'Exterior1st', 'Exterior2nd', 'MasVnrType', 'Foundation' and 'PavedDrive', "Fence" are unordered variables and will convert them to factors. Variables 'ExterQual', 'ExterCond' are ordered variables and assign numeric values to them an convert them to integer variables.
+
+```{r}
+df[,c("Street", "Alley", "RoofStyle", "RoofMatl", "Exterior1st", "Exterior2nd", "MasVnrType", "Foundation", "PavedDrive", "Fence")] <- lapply(df[,c("Street", "Alley", "RoofStyle", "RoofMatl", "Exterior1st", "Exterior2nd", "MasVnrType", "Foundation", "PavedDrive", "Fence")], factor) 
+
+df$ExterQual <-  as.integer(revalue(df$ExterQual, c("Fa"=0, "TA"=1, "Gd"=2, "Ex"=3)))
+df$ExterCond <-  as.integer(revalue(df$ExterCond, c("Po"=0, "Fa"=1, "TA"=2, "Gd"=3, "Ex"=4)))
+table(df$ExterQual)
+table(df$ExterCond)
+table(df$Foundation)
+table(df$PavedDrive)
+table(df$Fence)
+cbind(sapply(df[exterior_vars], class))
+```
+
+### Utility Variables 
+
+There are 5 utilities variables. Variable 'Utilities' has 2 NAs and 'Electrical' has 1 NA. All are character variables
+
+```{r}
+cbind(sapply(df[utility_vars], class))
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% utility_vars))]
+df[is.na(df$Utilities) | is.na(df$Electrical), c("Utilities", "Electrical")]
+
+```
+
+Fixing the variables with the mode values.
+
+```{r}
+df[1380, "Electrical"] <- names(sort(table(df$Electrical), decreasing=TRUE))[1]
+df[c(1916, 1946), c("Utilities")] <- names(sort(table(df$Utilities), decreasing=TRUE))[1]
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% utility_vars))]
+```
+
+```{r}
+
+table(df$Utilities)
+table(df$Heating)
+table(df$HeatingQC)
+table(df$CentralAir)
+table(df$Electrical)
+```
+
+Variables 'Utilities' and 'Heating' and 'Electrical' are unordered and hence will convert them to factors. Variables 'HeatingQC' and 'CentralAir' are ordered and will assigned numeric values and convert them to numeric type.
+
+```{r}
+
+df$Utilities <- as.factor(df$Utilities)
+df$Heating <- as.factor(df$Heating)
+df$Electrical <- as.factor(df$Electrical)
+df$HeatingQC <-  as.integer(revalue(df$HeatingQC, c("Po"=0, "Fa"=1, "TA"=2, "Gd"=3, "Ex"=4)))
+df$CentralAir <-  as.integer(revalue(df$CentralAir, c("N"=0, "Y"=1)))
+table(df$Utilities)
+table(df$Heating)
+table(df$HeatingQC)
+table(df$CentralAir)
+table(df$Electrical)
+cbind(sapply(df[utility_vars], class))
+```
+
+### Interior Features 
+
+```{r}
+cbind(sapply(df[interior_vars], class))
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% interior_vars))]
+```
+
+Handling missing data
+
+```{r}
+df$FireplaceQu[is.na(df$FireplaceQu)] <- 'None'
+df[is.na(df$Functional) | is.na(df$KitchenQual), c("Functional", "KitchenQual")] 
+df$KitchenQual[is.na(df$KitchenQual)] <- names(sort(table(df$KitchenQual), decreasing=TRUE))[1]
+df$Functional[is.na(df$Functional)] <- names(sort(table(df$Functional), decreasing=TRUE))[1]
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% interior_vars))]
+table(df$FireplaceQu)
+table(df$Functional)
+table(df$KitchenQual)
+```
+
+All the three character variables are ordinal and will assign integer values and convert them to integer type variables.
+
+```{r}
+
+df$FireplaceQu <-  as.integer(revalue(df$FireplaceQu, c("None"=0, "Po"=1, "Fa"=2, "TA"=3, "Gd"=4, "Ex"=5)))
+df$Functional <-  as.integer(revalue(df$Functional, c("Sal"=0, "Sev"=1, "Maj2"=2, "Maj1"=3, "Mod"=4, "Min2"=5, "Min1"=6, "Typ"=7)))
+df$KitchenQual <-  as.integer(revalue(df$KitchenQual, c("Fa"=0, "TA"=1, "Gd"=2, "Ex"=3)))
+table(df$FireplaceQu)
+table(df$Functional)
+table(df$KitchenQual)
+```
+
+###Miscellaneous Variables 
+
+There are 2 varaibles and 'MiscFeature' has 2814 NA's
+
+```{r}
+cbind(sapply(df[misc_vars], class))
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% c("%Misc%")))]
+
+
+```
+
+I will assign 'None' to all the NA's in this variable and convert it to a factor since there is no order and it is a multinomial variable.
+
+```{r}
+df$MiscFeature[is.na(df$MiscFeature)] <- "None"
+table(df$MiscFeature)
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% c("%Misc%")))]
+df$MiscFeature <- as.factor(df$MiscFeature)
+cbind(sapply(df[misc_vars], class))
+```
+
+### Zoning Variables 
+
+
+MSZoning: Identifies the general zoning classification of the sale.
+		
+       A	Agriculture
+       C	Commercial
+       FV	Floating Village Residential
+       I	Industrial
+       RH	Residential High Density
+       RL	Residential Low Density
+       RP	Residential Low Density Park 
+       RM	Residential Medium Density
+       
+```{r}
+cbind(sapply(df[zoning_vars], class))
+table(df[zoning_vars])
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% zoning_vars))]
+```
+
+There are 4 NA in 'MSZoning' variable and I will impute it with mode. The variable is not ordinal and hence will convert it to a factor.
+
+```{r}
+df$MSZoning[is.na(df$MSZoning)] <- names(sort(table(df$MSZoning), decreasing=TRUE))[1]
+
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% zoning_vars))]
+df$MSZoning <- as.factor(df$MSZoning)
+cbind(sapply(df[zoning_vars], class))
+```
+
+### Community and Neighborhood Variables 
+
+There are 3 varaibles with no NA's
+
+```{r}
+cbind(sapply(df[neighborhood_vars], class))
+NAcol <- which(colSums(is.na(df)) > 0)
+df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+df_NA[c(which(names(df_NA) %like% neighborhood_vars))]
+table(df$Neighborhood)
+table(df$Condition1)
+table(df$Condition2)
+```
+
+All the three variables are unordered and will convert them to factors
+
+```{r}
+df$Neighborhood <- as.factor(df$Neighborhood)
+df$Condition1 <- as.factor(df$Condition1)
+df$Condition2 <- as.factor(df$Condition2)
+cbind(sapply(df[neighborhood_vars], class))
+```
+
+## Feature Engineering & Feature Elimination
+
+Now that the variable handling is done, I will explore the data further to understand the relationship between variables and their importance as below - 
+
+ 1. Check linear combination of numeric variables
+ 2. Skew and Kurtosis of integer variables
+ 3. check the correlation of the integer variables 
+ 4. check variable importance using random forests
+
+
+```{r collapse=TRUE}
+### Group the factor and integer variables
+numeric_cols <- unlist(sapply(df, is.numeric))
+numeric_col_names <- names(df[,numeric_cols])
+factor_cols <- unlist(sapply(df, is.factor))
+names(df[,factor_cols])
+
+
+#Find linear combinations and eliminate the combination variables. Do not include SalePrice variable.
+findLinearCombos(df[,numeric_col_names[-52]])
+
+### Skew and Kurtosis of integer variables prior to any transformations, feature engineering or one-hot encoding
+as.data.frame(psych::describe(df[,numeric_cols]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+```
+
+findLinearCombos() identified that 
+1. TotalBsmtSF is a cumlative sum of "BsmtFinSF1"    "BsmtFinSF2"    "BsmtUnfSF"
+2. "GrLivArea" is a cumlative sum of "X1stFlrSF"     "X2ndFlrSF"     "LowQualFinSF"
+
+```{r collapse=TRUE, fig.height=10, fig.width=10}
+
+### Get a correlation of int variables
+
+#### Plot the correlations of all numeric variables ####
+df_corr <- cor(df[,numeric_cols], use="pairwise.complete.obs") #correlations of all numeric variables
+#sort on decreasing correlations with SalePrice
+df_corr_sorted <- as.matrix(sort(df_corr[,'SalePrice'], decreasing = TRUE))
+#select only high corelations with Sales Price
+df_high_corr <- names(which(apply(df_corr_sorted, 1, function(x) abs(x)>0.4)))
+df_corr_matrix <- df_corr[df_high_corr, df_high_corr]
+#corrplot.mixed(cor_numVar, tl.col="black", tl.pos = "lt", upper="circle", lower="number")
+corrplot(df_corr_matrix, method="number", tl.col="black", tl.srt=45)
+
+```
+
+The correlation matrix above indicates the variables that are highly correlated with SalePrice. There is also a high correlation among some predictor variables. Inorder to reduce the effects of multi-collinearity we need to eliminate predictor variables that are highly correlated with other predictor variables. Before eliminating the variables I am going to run a Random Forests model for a test of significance and important variables.
+
+```{r collapse=TRUE, fig.height=10, fig.width=10}
+set.seed(100)
+#check variable importance using random forests
+#rf_ranges <- list(ntree=c(500), mtry=5:30)
+#rf_tune <- tune(randomForest, SalePrice ~ ., data=df[1:1460,], ranges=rf_ranges) 
+#rf_tune$best.parameters
+#rf_best <- rf_tune$best.model
+#rf_best
+df_rf <- randomForest(x=df[1:1460, -80], y=df$SalePrice[1:1460], ntree=500, importance=TRUE)
+varImpPlot(df_rf)
+```
+
+The left plot above indicates the increase in MSE if a variable is taken out of the model. The right plot indicates the node purity, which is a loss function using which the splits are chosen. The loss function is MSE for regression and GINI-impurity for classification.
+
+Now, I will proceed with feature engineering and feature elimination. I will start with each of the variable groups above, run a pair-wise correlation of each group with SalePrice while keeping in view the above correlation matrix and variable importance. 
+
+```{r}
+cor(df[,c("SalePrice", "GarageCars", "GarageArea", "GarageYrBlt", "GarageFinish", "GarageQual", "GarageCond")], use="pairwise.complete.obs")
+```
+
+The count of Garage Cars is directly proportional to the Garage Area. Garage cars has a high correlation with SalePrice than GarageArea. Hence we drop the variable GarageArea. Similarly we drop GarageFinish. For now I am going to create list of variables that will be dropped and append to this list as I identify more.
+
+```{r}
+drop_vars <- list("GarageArea", "GarageFinish")
+```
+
+Predictor variable TotalBsmtSF is the cumulative sum of predictor variables BsmtFinSF1,BsmtFinSF2, BsmtUnfSF
+Correlation between TotalBsmtSF and the other Bsmt SquareFoot variable is 1. Hence dropping the variables BsmtFinSF1,BsmtFinSF2, BsmtUnfSF.
+
+```{r collapse=TRUE}
+cor(df$TotalBsmtSF, (df$BsmtFinSF1+df$BsmtFinSF2+df$BsmtUnfSF))
+cor(df[,c("SalePrice", "BsmtQual", "BsmtCond", "BsmtExposure", "TotalBsmtSF", "BsmtFullBath")], use="pairwise.complete.obs")
+drop_vars <- list.append(drop_vars, "BsmtFinSF1", "BsmtFinSF2", "BsmtUnfSF")
+```
+
+Decks are usually open and porches either have a roof or are screened. 
+
+Hence, I am going to consolidate all the porch variables and delete "OpenPorchSF", "EnclosedPorch", "X3SsnPorch", "ScreenPorch" variables.
+
+```{r collapse=TRUE}
+df$TotalPorchSF <- df$OpenPorchSF + df$EnclosedPorch + df$X3SsnPorch + df$ScreenPorch
+cor(df[,c("SalePrice", "TotalPorchSF", "WoodDeckSF")], use="pairwise.complete.obs")
+plot(df$TotalPorchSF, df$SalePrice)
+drop_vars <- list.append(drop_vars, "OpenPorchSF", "EnclosedPorch", "X3SsnPorch", "ScreenPorch" )
+head(df$SalePrice)
+```
+
+Adding all the porch variables did not seem to increase the correlation with SalePrice
+
+
+GrLivArea is a cumulative sum of X1stFlrSF, X2ndFlrSF, LowQualFinSF and have a correlation of 1 with GrLivArea.
+Dropping X1stFlrSF, X2ndFlrSF, LowQualFinSF inorder to reduce multi-collinearity effects.
+
+I am also going to consolidate the variables GrLivArea and TotalBsmtSF into TotalSF and drop the two variables
+
+
+```{r collapse=TRUE}
+cor(df$GrLivArea, (df$X1stFlrSF+df$X2ndFlrSF+df$LowQualFinSF))
+df$TotalSF <- df$GrLivArea + df$TotalBsmtSF
+cor(df[,c("SalePrice", "GrLivArea", "TotalBsmtSF", "TotalSF")], use="pairwise.complete.obs")
+drop_vars <- list.append(drop_vars, "X1stFlrSF", "X2ndFlrSF", "LowQualFinSF", "GrLivArea", "TotalBsmtSF")
+```
+
+I will not touch the Quality variables since buyers depend on each quality variable first before being satisfied with the overall quality of the house.
+
+Next, I am going to consolidate all the bathroom variables since buyers are interested in total bathroom count. I will multiply the half baths with .05 inorder to sum it up correctly. Below correlation clearly indicates that TotalBathRooms variable is a strong predictor than individual predictors. Thus, dropping all the Bath predictor variables and retaining the TotalBathRooms variable.
+
+```{r}
+df$TotalBathRooms <- df$BsmtFullBath +  (df$BsmtHalfBath * 0.5) + df$FullBath + (df$HalfBath * 0.5)
+cor(df[,c("SalePrice", "TotalBathRooms", "BsmtFullBath", "BsmtHalfBath",  "FullBath" ,  "HalfBath")], use="pairwise.complete.obs")
+drop_vars <- list.append(drop_vars, "BsmtFullBath", "BsmtHalfBath",  "FullBath" ,  "HalfBath")
+```
+
+I am going to take a look at the Room predictor variables. TotRmsAbvGrd is highly correlated with SalePrice, however, above correlation matrix indicates a high correlation with GrLivArea. Since GrLivArea is highly correlated with SalePrice than TotRmsAbvGrd is with SalePrice, we will drop TotRmsAbvGrd variable.
+
+```{r}
+cor(df[,c("SalePrice", "BedroomAbvGr",  "KitchenAbvGr", "TotRmsAbvGrd")], use="pairwise.complete.obs")
+drop_vars <- list.append(drop_vars, "TotRmsAbvGrd")
+```
+
+Since buyers are interested in the age of the home. I am going to created a new variable 'Age' and calculate based on the YearBuilt, YrSold and MonthSold variables. I also converted month into year unit by dividing by 12. A plot of Age and SalePrice indicate a negative correlation. Dropping variables "MoSold", "YrSold", because they have a low positive correlation with "SalePrice". Dropping "YearBuilt" since it has a high correlation with SalePrice and Age variables. 
+
+```{r collapse=TRUE}
+df$Age <- round(df$YrSold+df$MoSold/12 - df$YearBuilt,2)
+cor(df[, c("SalePrice", "Age", "MoSold", "YrSold", "YearBuilt")],use="pairwise.complete.obs")
+plot(df$Age, df$SalePrice)
+hist(df$Age)
+drop_vars <- list.append(drop_vars, "MoSold", "YrSold", "YearBuilt")
+
+```
+
+
+Dropping the variables below and getting a list of numeric and character variables
+```{r}
+drop_vars <- unlist(drop_vars)
+
+df <- df[!names(df) %in% drop_vars]
+numeric_cols <- unlist(sapply(df, is.numeric))
+names(df[,numeric_cols])
+factor_cols <- unlist(sapply(df, is.factor))
+names(df[,factor_cols])
+```
+
+
+```{r definition, echo = FALSE}
+
+EDA <- function(df)
+{
+  ### Plot Histograms on the canvas####
+  par(mfrow=c(3,2))
+  for (i in names(df)){
+    #print (is.numeric(df[[i]]))
+    if (is.numeric(df[[i]]))
+    {
+      hist(df[[i]], xlab = i, main = paste("Histogram of ", i, sep=" "))
+      
+    }
+    
+  }
+  
+  ### Plot Boxplots on the canvas####
+  par(mfrow=c(3,2))
+  for (i in names(df)){
+    #print (is.numeric(df[[i]]))
+    if (is.numeric(df[[i]]))
+    {
+      
+      boxplot(df[[i]], xlab = i, main = paste("Box Plot of ", i, sep=" "))
+      
+      
+    }
+    
+  }
+  
+  ### Plot Barplots of Factor variables on the canvas####
+  par(mfrow=c(3,1))
+  for (i in names(df)){
+    #print (is.numeric(df[[i]]))
+    if (is.factor(df[[i]]))
+    {
+      
+      plot(df[[i]], xlab = i, main = paste("Bar Plot of ", i, sep=" "))
+      
+      
+    }
+    
+  }
+  
+#  (lm.fit <- lm(quality~., data=df))
+  
+#  data_set <- list(colnames=colnames, rowcount=rowcount, 
+ #                  stats=stats, cor=cor, lm = lm.fit, lm.summary = summary(lm.fit), df=df)
+ # return(data_set)
+}
+
+```
+
+
+## Variable Transformation
+
+In the  next step, I am going to 
+
+ 1. Check the skew and kurtosis values of all numeric variables using the describe() function. 
+ 2. Histogram of variables
+ 3. Transform the variables based on Skew and Kurtosis values
+ 4. Check Correlations and variable importance again to verify if anything has changed
+ 
+The numeric columns also contain the ordinal variables. I will ignore the ordinal variables and look at the original numeric variables only.
+
+Excluding the ordinal integer variables (revalued ordinal character variables), I will focus on the following numeric variables -  
+
+"LotFrontage", "LotArea", "MasVnrArea", "TotalBsmtSF", "GrLivArea", "BedroomAbvGr"   "KitchenAbvGr", "Fireplaces", "GarageCars", "WoodDeckSF", "PoolArea",  "MiscVal", "SalePrice", "TotalPorchSF", "TotalBathRooms"
+
+All the above variables will be transformed using the YeoJohnson method with the exception of SalePrice. YeoJohnson method handles zero's and negative values. SalePrice will use a logarithmic transformation since submissions are evaluated on Root-Mean-Squared-Error (RMSE) between the logarithm of the predicted value and the logarithm of the observed sales price.
+
+```{r collapse=TRUE}
+transform_vars <-  c("LotFrontage", "LotArea", "MasVnrArea", "TotalSF", "BedroomAbvGr",   "KitchenAbvGr", "Fireplaces", "GarageCars", "WoodDeckSF", "PoolArea",  "MiscVal", "TotalPorchSF", "TotalBathRooms", "Age")
+
+as.data.frame(psych::describe(df[transform_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+
+#Exploratory data analysis before transformation
+EDA(df[transform_vars])
+
+#Transform variables
+preprocessParams <- preProcess(df[transform_vars], method=c("YeoJohnson"))
+preprocessParams
+preprocessParams$method
+transformed_df <- predict(preprocessParams, df)
+
+hist(df$SalePrice)
+transformed_df$SalePrice <- log(df$SalePrice)
+#head(transformed_df)
+as.data.frame(psych::describe(transformed_df[transform_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+#Exploratory data analysis after transformation
+EDA(transformed_df[transform_vars])
+```
+
+```{r fig.height=12, fig.width=12, collapse=TRUE}
+#Check variable importance post transformation
+set.seed(100)
+#check variable importance using random forests
+#rf_ranges <- list(ntree=c(500), mtry=5:30)
+#rf_tune <- tune(randomForest, SalePrice ~ ., data=df[1:1460,], ranges=rf_ranges) 
+#rf_tune$best.parameters
+#rf_best <- rf_tune$best.model
+#rf_best
+names(transformed_df)
+trans_df_rf <- randomForest(x=transformed_df[1:1460, -63], y=transformed_df$SalePrice[1:1460], ntree=500, importance=TRUE)
+varImpPlot(trans_df_rf)
+```
+
+
+
+
+
+```{r fig.height=10, fig.width=10}
+trans_df_corr <- round(cor(transformed_df[c(transform_vars, "SalePrice")],use="pairwise.complete.obs"),2)
+trans_cor_sorted <- as.matrix(sort(trans_df_corr[,'SalePrice'], decreasing = TRUE))
+trans_cor_vars <- names(apply(trans_cor_sorted, 1, function(x) abs(x)>0))
+corrplot(trans_df_corr[trans_cor_vars,trans_cor_vars], method="number", type="upper", tl.col="black", tl.srt=45)
+
+#Scatter plot matrix of variables
+pairs(~SalePrice+Age+LotFrontage,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+
+pairs(~SalePrice+LotArea+MasVnrArea,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+
+pairs(~SalePrice+TotalSF+BedroomAbvGr,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+
+pairs(~SalePrice+KitchenAbvGr+Fireplaces+GarageCars,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+      
+pairs(~SalePrice+WoodDeckSF+PoolArea,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+
+pairs(~SalePrice+MiscVal+TotalPorchSF+TotalBathRooms,data=transformed_df, 
+   main="Simple Scatterplot Matrix")
+```
+
+
+
+##One-Hot Encoding
+
+Post transformation I will continue to work with 'transfomed_df' dataset. Now that the numeric variables are transformed. I will encode the nominal variables, in other words the factor variables. Since our dependant variable, SalePrice is an integer and the goal is to predict the SalePrice, we are going to run a regression model for which categorical data for nominal variables must be converted to numeric form. I am going to use the One-Hot encoding.
+
+The nominal variables are as below - 
+
+```{r echo=TRUE, collapse=TRUE}
+factor_cols <- unlist(sapply(transformed_df, is.factor))
+factor_names <- names(transformed_df[,factor_cols])
+
+```
+
+```{r collapse=TRUE}
+
+# Use dummyVars function in Caret package for One-hot encoding
+dummy <- dummyVars(" ~ .", data = transformed_df[factor_names])
+df_trans <- data.frame(predict(dummy, newdata = transformed_df))
+factors_names <- unlist(factor_names)
+transformed_df <- cbind(transformed_df, df_trans)
+transformed_df <- transformed_df[!names(transformed_df) %in% factor_names]
+
+#dropping the original nominal variables after transformation
+
+```
+
+I could extend the EDA to identifying the near zero variance, elimiating outliers. However, I am going to stop the EDA and move forward with the regression models.
+
+
+## Graphical Analysis {.tabset}
+
+```{r echo=FALSE}
+
+garage_vars <- names(transformed_df[which(names(transformed_df) %like% "%Garage%")])
+basement_vars <- names(transformed_df[which(names(transformed_df) %like% "%Bsmt%")])
+pool_vars <- names(transformed_df[which(names(transformed_df) %like% "%Pool%")])
+
+porch_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Porch%", "%Deck%"))])
+
+sale_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Sale%", "%Sold"))])
+
+lot_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Lot%", "%Land%"))])
+
+dwelling_vars <- names(transformed_df[which(names(transformed_df) %like% c("%SubClass%", "%Bldg%", "%HouseStyle%", "%Overall%", "%Year%"))])
+
+exterior_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Exter%", "%Roof%", "%MasVnr%", "%Foundation%", "%Street%", "%Alley%", "%PavedDrive%", "%Fence%"))])
+
+utility_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Heat%", "%Utilities%", "%Central%", "%Electrical%"))])
+
+interior_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Room%", "FullBath%", "HalfBath%", "%Kitchen%", "%Fire%", "%AbvGr%", "%Functional%", "%FlrSF%", "%LowQualFinSF%", "%TotalSF%"))])
+
+misc_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Misc%"))])
+
+zoning_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Zoning%"))])
+
+neighborhood_vars <- names(transformed_df[which(names(transformed_df) %like% c("%Neighborhood%", "Condition%"))])
+
+
+vars_list = list(garage_vars, basement_vars, pool_vars, porch_vars, sale_vars, lot_vars, 
+                 dwelling_vars, exterior_vars, utility_vars, interior_vars, misc_vars, 
+                 zoning_vars, neighborhood_vars)
+
+df_var <- as.data.frame(do.call(cbind.fill, c(vars_list, fill = NA)))
+colnames(df_var) <-  c("GarageVars", "BasementVars", "PoolVars", "PorchVars", "SaleVars", "LotVars",
+                        "DwellingVars", "ExteriorVars", "UtilityVars", "InteriorVars", "MiscVars", 
+                        "ZoningVars", "NeighborhoodVars")
+#df_var
+
+#Show the  missing value counts with their column names
+#NAcol <- which(colSums(is.na(df)) > 0)
+#df_NA <- sort(colSums(sapply(df[NAcol], is.na)), decreasing = TRUE)
+#df_NA
+
+```
+
+### Garage Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+#List of garage variables after feature engineering
+garage_vars <- setdiff(garage_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[garage_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[garage_vars])
+EDA(transformed_df[garage_vars])
+
+```
+
+### Basement Variables
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+basement_vars <- setdiff(basement_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[basement_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[basement_vars])
+EDA(transformed_df[basement_vars])
+```
+
+### Pool Variables
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+pool_vars <- setdiff(pool_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[pool_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[pool_vars])
+EDA(transformed_df[pool_vars])
+```
+
+### Porch Variables
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+porch_vars <- setdiff(porch_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[porch_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[porch_vars])
+EDA(transformed_df[porch_vars])
+```
+
+### Sale Variables
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+sale_vars <- setdiff(sale_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[sale_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[sale_vars])
+EDA(transformed_df[sale_vars])
+```
+
+### Lot and Land Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+lot_vars <- setdiff(lot_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[lot_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[lot_vars])
+EDA(transformed_df[lot_vars])
+```
+
+### Dwelling Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+dwelling_vars <- setdiff(dwelling_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[dwelling_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[dwelling_vars])
+EDA(transformed_df[dwelling_vars])
+```
+
+### Exterior Features
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+exterior_vars <- setdiff(exterior_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[exterior_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[exterior_vars])
+EDA(transformed_df[exterior_vars])
+```
+
+### Utility Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+utility_vars <- setdiff(utility_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[utility_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[utility_vars])
+EDA(transformed_df[utility_vars])
+```
+
+### Interior Features
+
+```{r collapse=TRUE}
+ ## Quick summary ##
+interior_vars <- setdiff(interior_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[interior_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[interior_vars])
+EDA(transformed_df[interior_vars])
+```
+
+### Miscellaneous Variables
+
+```{r collapse=TRUE}
+mmisc_vars <- setdiff(misc_vars, drop_vars)
+## Quick summary ##
+as.data.frame(psych::describe(transformed_df[misc_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[misc_vars])
+EDA(transformed_df[misc_vars])
+```
+
+### Zoning Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+zoning_vars <- setdiff(zoning_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[zoning_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[zoning_vars])
+EDA(transformed_df[zoning_vars])
+```
+
+### Community and Neighborhood Variables
+
+```{r collapse=TRUE}
+## Quick summary ##
+neighborhood_vars <- setdiff(neighborhood_vars, drop_vars)
+as.data.frame(psych::describe(transformed_df[neighborhood_vars]))[, c("mean", "median", "sd", "skew", "kurtosis")]
+head(transformed_df[neighborhood_vars])
+EDA(transformed_df[neighborhood_vars])
+```
+
+
+```{r}
+##From CARET package
+#fit_glm <= glm(transformed_df~., family="")
+#varImp(fit_glm)
+
+#A correaltion between the garage variables and
+### Get a historgram of factor variables
+### Identify most impact variables
+```

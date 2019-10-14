@@ -1,0 +1,1296 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={ASME House prices: Detailed EDA and Regression Techniques},
+            pdfauthor={Chetana Katpally},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{ASME House prices: Detailed EDA and Regression Techniques}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{Chetana Katpally}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{4}
+\tableofcontents
+}
+\section{Executive Summary}\label{executive-summary}
+
+\section{Introduction}\label{introduction}
+
+\subsection{Competition description}\label{competition-description}
+
+The description is at this link -
+\url{https://www.kaggle.com/c/house-prices-advanced-regression-techniques}
+
+\subsection{Data description}\label{data-description}
+
+\textbf{Defining variables as per the data\_description.txt file}
+
+MSSubClass: Identifies the type of dwelling involved in the sale.
+
+\begin{verbatim}
+    20  1-STORY 1946 & NEWER ALL STYLES
+    30  1-STORY 1945 & OLDER
+    40  1-STORY W/FINISHED ATTIC ALL AGES
+    45  1-1/2 STORY - UNFINISHED ALL AGES
+    50  1-1/2 STORY FINISHED ALL AGES
+    60  2-STORY 1946 & NEWER
+    70  2-STORY 1945 & OLDER
+    75  2-1/2 STORY ALL AGES
+    80  SPLIT OR MULTI-LEVEL
+    85  SPLIT FOYER
+    90  DUPLEX - ALL STYLES AND AGES
+   120  1-STORY PUD (Planned Unit Development) - 1946 & NEWER
+   150  1-1/2 STORY PUD - ALL AGES
+   160  2-STORY PUD - 1946 & NEWER
+   180  PUD - MULTILEVEL - INCL SPLIT LEV/FOYER
+   190  2 FAMILY CONVERSION - ALL STYLES AND AGES
+\end{verbatim}
+
+MSZoning: Identifies the general zoning classification of the sale.
+
+\begin{verbatim}
+   A    Agriculture
+   C    Commercial
+   FV   Floating Village Residential
+   I    Industrial
+   RH   Residential High Density
+   RL   Residential Low Density
+   RP   Residential Low Density Park 
+   RM   Residential Medium Density
+\end{verbatim}
+
+LotFrontage: Linear feet of street connected to property
+
+LotArea: Lot size in square feet
+
+Street: Type of road access to property
+
+\begin{verbatim}
+   Grvl Gravel  
+   Pave Paved
+    
+\end{verbatim}
+
+Alley: Type of alley access to property
+
+\begin{verbatim}
+   Grvl Gravel
+   Pave Paved
+   NA   No alley access
+    
+\end{verbatim}
+
+LotShape: General shape of property
+
+\begin{verbatim}
+   Reg  Regular 
+   IR1  Slightly irregular
+   IR2  Moderately Irregular
+   IR3  Irregular
+   
+\end{verbatim}
+
+LandContour: Flatness of the property
+
+\begin{verbatim}
+   Lvl  Near Flat/Level 
+   Bnk  Banked - Quick and significant rise from street grade to building
+   HLS  Hillside - Significant slope from side to side
+   Low  Depression
+    
+\end{verbatim}
+
+Utilities: Type of utilities available
+
+\begin{verbatim}
+   AllPub   All public Utilities (E,G,W,& S)    
+   NoSewr   Electricity, Gas, and Water (Septic Tank)
+   NoSeWa   Electricity and Gas Only
+   ELO  Electricity only    
+\end{verbatim}
+
+LotConfig: Lot configuration
+
+\begin{verbatim}
+   Inside   Inside lot
+   Corner   Corner lot
+   CulDSac  Cul-de-sac
+   FR2  Frontage on 2 sides of property
+   FR3  Frontage on 3 sides of property
+\end{verbatim}
+
+LandSlope: Slope of property
+
+\begin{verbatim}
+   Gtl  Gentle slope
+   Mod  Moderate Slope  
+   Sev  Severe Slope
+\end{verbatim}
+
+Neighborhood: Physical locations within Ames city limits
+
+\begin{verbatim}
+   Blmngtn  Bloomington Heights
+   Blueste  Bluestem
+   BrDale   Briardale
+   BrkSide  Brookside
+   ClearCr  Clear Creek
+   CollgCr  College Creek
+   Crawfor  Crawford
+   Edwards  Edwards
+   Gilbert  Gilbert
+   IDOTRR   Iowa DOT and Rail Road
+   MeadowV  Meadow Village
+   Mitchel  Mitchell
+   Names    North Ames
+   NoRidge  Northridge
+   NPkVill  Northpark Villa
+   NridgHt  Northridge Heights
+   NWAmes   Northwest Ames
+   OldTown  Old Town
+   SWISU    South & West of Iowa State University
+   Sawyer   Sawyer
+   SawyerW  Sawyer West
+   Somerst  Somerset
+   StoneBr  Stone Brook
+   Timber   Timberland
+   Veenker  Veenker
+        
+\end{verbatim}
+
+Condition1: Proximity to various conditions
+
+\begin{verbatim}
+   Artery   Adjacent to arterial street
+   Feedr    Adjacent to feeder street   
+   Norm Normal  
+   RRNn Within 200' of North-South Railroad
+   RRAn Adjacent to North-South Railroad
+   PosN Near positive off-site feature--park, greenbelt, etc.
+   PosA Adjacent to postive off-site feature
+   RRNe Within 200' of East-West Railroad
+   RRAe Adjacent to East-West Railroad
+\end{verbatim}
+
+Condition2: Proximity to various conditions (if more than one is
+present)
+
+\begin{verbatim}
+   Artery   Adjacent to arterial street
+   Feedr    Adjacent to feeder street   
+   Norm Normal  
+   RRNn Within 200' of North-South Railroad
+   RRAn Adjacent to North-South Railroad
+   PosN Near positive off-site feature--park, greenbelt, etc.
+   PosA Adjacent to postive off-site feature
+   RRNe Within 200' of East-West Railroad
+   RRAe Adjacent to East-West Railroad
+\end{verbatim}
+
+BldgType: Type of dwelling
+
+\begin{verbatim}
+   1Fam Single-family Detached  
+   2FmCon   Two-family Conversion; originally built as one-family dwelling
+   Duplx    Duplex
+   TwnhsE   Townhouse End Unit
+   TwnhsI   Townhouse Inside Unit
+\end{verbatim}
+
+HouseStyle: Style of dwelling
+
+\begin{verbatim}
+   1Story   One story
+   1.5Fin   One and one-half story: 2nd level finished
+   1.5Unf   One and one-half story: 2nd level unfinished
+   2Story   Two story
+   2.5Fin   Two and one-half story: 2nd level finished
+   2.5Unf   Two and one-half story: 2nd level unfinished
+   SFoyer   Split Foyer
+   SLvl Split Level
+\end{verbatim}
+
+OverallQual: Rates the overall material and finish of the house
+
+\begin{verbatim}
+   10   Very Excellent
+   9    Excellent
+   8    Very Good
+   7    Good
+   6    Above Average
+   5    Average
+   4    Below Average
+   3    Fair
+   2    Poor
+   1    Very Poor
+\end{verbatim}
+
+OverallCond: Rates the overall condition of the house
+
+\begin{verbatim}
+   10   Very Excellent
+   9    Excellent
+   8    Very Good
+   7    Good
+   6    Above Average   
+   5    Average
+   4    Below Average   
+   3    Fair
+   2    Poor
+   1    Very Poor
+    
+\end{verbatim}
+
+YearBuilt: Original construction date
+
+YearRemodAdd: Remodel date (same as construction date if no remodeling
+or additions)
+
+RoofStyle: Type of roof
+
+\begin{verbatim}
+   Flat Flat
+   Gable    Gable
+   Gambrel  Gabrel (Barn)
+   Hip  Hip
+   Mansard  Mansard
+   Shed Shed
+    
+\end{verbatim}
+
+RoofMatl: Roof material
+
+\begin{verbatim}
+   ClyTile  Clay or Tile
+   CompShg  Standard (Composite) Shingle
+   Membran  Membrane
+   Metal    Metal
+   Roll Roll
+   Tar&Grv  Gravel & Tar
+   WdShake  Wood Shakes
+   WdShngl  Wood Shingles
+    
+\end{verbatim}
+
+Exterior1st: Exterior covering on house
+
+\begin{verbatim}
+   AsbShng  Asbestos Shingles
+   AsphShn  Asphalt Shingles
+   BrkComm  Brick Common
+   BrkFace  Brick Face
+   CBlock   Cinder Block
+   CemntBd  Cement Board
+   HdBoard  Hard Board
+   ImStucc  Imitation Stucco
+   MetalSd  Metal Siding
+   Other    Other
+   Plywood  Plywood
+   PreCast  PreCast 
+   Stone    Stone
+   Stucco   Stucco
+   VinylSd  Vinyl Siding
+   Wd Sdng  Wood Siding
+   WdShing  Wood Shingles
+\end{verbatim}
+
+Exterior2nd: Exterior covering on house (if more than one material)
+
+\begin{verbatim}
+   AsbShng  Asbestos Shingles
+   AsphShn  Asphalt Shingles
+   BrkComm  Brick Common
+   BrkFace  Brick Face
+   CBlock   Cinder Block
+   CemntBd  Cement Board
+   HdBoard  Hard Board
+   ImStucc  Imitation Stucco
+   MetalSd  Metal Siding
+   Other    Other
+   Plywood  Plywood
+   PreCast  PreCast
+   Stone    Stone
+   Stucco   Stucco
+   VinylSd  Vinyl Siding
+   Wd Sdng  Wood Siding
+   WdShing  Wood Shingles
+\end{verbatim}
+
+MasVnrType: Masonry veneer type
+
+\begin{verbatim}
+   BrkCmn   Brick Common
+   BrkFace  Brick Face
+   CBlock   Cinder Block
+   None None
+   Stone    Stone
+\end{verbatim}
+
+MasVnrArea: Masonry veneer area in square feet
+
+ExterQual: Evaluates the quality of the material on the exterior
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Average/Typical
+   Fa   Fair
+   Po   Poor
+    
+\end{verbatim}
+
+ExterCond: Evaluates the present condition of the material on the
+exterior
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Average/Typical
+   Fa   Fair
+   Po   Poor
+    
+\end{verbatim}
+
+Foundation: Type of foundation
+
+\begin{verbatim}
+   BrkTil   Brick & Tile
+   CBlock   Cinder Block
+   PConc    Poured Contrete 
+   Slab Slab
+   Stone    Stone
+   Wood Wood
+    
+\end{verbatim}
+
+BsmtQual: Evaluates the height of the basement
+
+\begin{verbatim}
+   Ex   Excellent (100+ inches) 
+   Gd   Good (90-99 inches)
+   TA   Typical (80-89 inches)
+   Fa   Fair (70-79 inches)
+   Po   Poor (<70 inches
+   NA   No Basement
+    
+\end{verbatim}
+
+BsmtCond: Evaluates the general condition of the basement
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Typical - slight dampness allowed
+   Fa   Fair - dampness or some cracking or settling
+   Po   Poor - Severe cracking, settling, or wetness
+   NA   No Basement
+\end{verbatim}
+
+BsmtExposure: Refers to walkout or garden level walls
+
+\begin{verbatim}
+   Gd   Good Exposure
+   Av   Average Exposure (split levels or foyers typically score average or above)  
+   Mn   Mimimum Exposure
+   No   No Exposure
+   NA   No Basement
+\end{verbatim}
+
+BsmtFinType1: Rating of basement finished area
+
+\begin{verbatim}
+   GLQ  Good Living Quarters
+   ALQ  Average Living Quarters
+   BLQ  Below Average Living Quarters   
+   Rec  Average Rec Room
+   LwQ  Low Quality
+   Unf  Unfinshed
+   NA   No Basement
+    
+\end{verbatim}
+
+BsmtFinSF1: Type 1 finished square feet
+
+BsmtFinType2: Rating of basement finished area (if multiple types)
+
+\begin{verbatim}
+   GLQ  Good Living Quarters
+   ALQ  Average Living Quarters
+   BLQ  Below Average Living Quarters   
+   Rec  Average Rec Room
+   LwQ  Low Quality
+   Unf  Unfinshed
+   NA   No Basement
+\end{verbatim}
+
+BsmtFinSF2: Type 2 finished square feet
+
+BsmtUnfSF: Unfinished square feet of basement area
+
+TotalBsmtSF: Total square feet of basement area
+
+Heating: Type of heating
+
+\begin{verbatim}
+   Floor    Floor Furnace
+   GasA Gas forced warm air furnace
+   GasW Gas hot water or steam heat
+   Grav Gravity furnace 
+   OthW Hot water or steam heat other than gas
+   Wall Wall furnace
+    
+\end{verbatim}
+
+HeatingQC: Heating quality and condition
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Average/Typical
+   Fa   Fair
+   Po   Poor
+    
+\end{verbatim}
+
+CentralAir: Central air conditioning
+
+\begin{verbatim}
+   N    No
+   Y    Yes
+    
+\end{verbatim}
+
+Electrical: Electrical system
+
+\begin{verbatim}
+   SBrkr    Standard Circuit Breakers & Romex
+   FuseA    Fuse Box over 60 AMP and all Romex wiring (Average) 
+   FuseF    60 AMP Fuse Box and mostly Romex wiring (Fair)
+   FuseP    60 AMP Fuse Box and mostly knob & tube wiring (poor)
+   Mix  Mixed
+    
+\end{verbatim}
+
+1stFlrSF: First Floor square feet
+
+2ndFlrSF: Second floor square feet
+
+LowQualFinSF: Low quality finished square feet (all floors)
+
+GrLivArea: Above grade (ground) living area square feet
+
+BsmtFullBath: Basement full bathrooms
+
+BsmtHalfBath: Basement half bathrooms
+
+FullBath: Full bathrooms above grade
+
+HalfBath: Half baths above grade
+
+Bedroom: Bedrooms above grade (does NOT include basement bedrooms)
+
+Kitchen: Kitchens above grade
+
+KitchenQual: Kitchen quality
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Typical/Average
+   Fa   Fair
+   Po   Poor
+    
+\end{verbatim}
+
+TotRmsAbvGrd: Total rooms above grade (does not include bathrooms)
+
+Functional: Home functionality (Assume typical unless deductions are
+warranted)
+
+\begin{verbatim}
+   Typ  Typical Functionality
+   Min1 Minor Deductions 1
+   Min2 Minor Deductions 2
+   Mod  Moderate Deductions
+   Maj1 Major Deductions 1
+   Maj2 Major Deductions 2
+   Sev  Severely Damaged
+   Sal  Salvage only
+    
+\end{verbatim}
+
+Fireplaces: Number of fireplaces
+
+FireplaceQu: Fireplace quality
+
+\begin{verbatim}
+   Ex   Excellent - Exceptional Masonry Fireplace
+   Gd   Good - Masonry Fireplace in main level
+   TA   Average - Prefabricated Fireplace in main living area or Masonry Fireplace in basement
+   Fa   Fair - Prefabricated Fireplace in basement
+   Po   Poor - Ben Franklin Stove
+   NA   No Fireplace
+    
+\end{verbatim}
+
+GarageType: Garage location
+
+\begin{verbatim}
+   2Types   More than one type of garage
+   Attchd   Attached to home
+   Basment  Basement Garage
+   BuiltIn  Built-In (Garage part of house - typically has room above garage)
+   CarPort  Car Port
+   Detchd   Detached from home
+   NA   No Garage
+    
+\end{verbatim}
+
+GarageYrBlt: Year garage was built
+
+GarageFinish: Interior finish of the garage
+
+\begin{verbatim}
+   Fin  Finished
+   RFn  Rough Finished  
+   Unf  Unfinished
+   NA   No Garage
+    
+\end{verbatim}
+
+GarageCars: Size of garage in car capacity
+
+GarageArea: Size of garage in square feet
+
+GarageQual: Garage quality
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Typical/Average
+   Fa   Fair
+   Po   Poor
+   NA   No Garage
+    
+\end{verbatim}
+
+GarageCond: Garage condition
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Typical/Average
+   Fa   Fair
+   Po   Poor
+   NA   No Garage
+    
+\end{verbatim}
+
+PavedDrive: Paved driveway
+
+\begin{verbatim}
+   Y    Paved 
+   P    Partial Pavement
+   N    Dirt/Gravel
+    
+\end{verbatim}
+
+WoodDeckSF: Wood deck area in square feet
+
+OpenPorchSF: Open porch area in square feet
+
+EnclosedPorch: Enclosed porch area in square feet
+
+3SsnPorch: Three season porch area in square feet
+
+ScreenPorch: Screen porch area in square feet
+
+PoolArea: Pool area in square feet
+
+PoolQC: Pool quality
+
+\begin{verbatim}
+   Ex   Excellent
+   Gd   Good
+   TA   Average/Typical
+   Fa   Fair
+   NA   No Pool
+    
+\end{verbatim}
+
+Fence: Fence quality
+
+\begin{verbatim}
+   GdPrv    Good Privacy
+   MnPrv    Minimum Privacy
+   GdWo Good Wood
+   MnWw Minimum Wood/Wire
+   NA   No Fence
+\end{verbatim}
+
+MiscFeature: Miscellaneous feature not covered in other categories
+
+\begin{verbatim}
+   Elev Elevator
+   Gar2 2nd Garage (if not described in garage section)
+   Othr Other
+   Shed Shed (over 100 SF)
+   TenC Tennis Court
+   NA   None
+    
+\end{verbatim}
+
+MiscVal: \$Value of miscellaneous feature
+
+MoSold: Month Sold (MM)
+
+YrSold: Year Sold (YYYY)
+
+SaleType: Type of sale
+
+\begin{verbatim}
+   WD   Warranty Deed - Conventional
+   CWD  Warranty Deed - Cash
+   VWD  Warranty Deed - VA Loan
+   New  Home just constructed and sold
+   COD  Court Officer Deed/Estate
+   Con  Contract 15% Down payment regular terms
+   ConLw    Contract Low Down payment and low interest
+   ConLI    Contract Low Interest
+   ConLD    Contract Low Down
+   Oth  Other
+    
+\end{verbatim}
+
+SaleCondition: Condition of sale
+
+\begin{verbatim}
+   Normal   Normal Sale
+   Abnorml  Abnormal Sale -  trade, foreclosure, short sale
+   AdjLand  Adjoining Land Purchase
+   Alloca   Allocation - two linked properties with separate deeds, typically condo with a garage unit  
+   Family   Sale between family members
+   Partial  Home was not completed when last assessed (associated with New Homes)
+\end{verbatim}
+
+\section{Exploratory Data Analysis}\label{exploratory-data-analysis}
+
+\subsection{Loading required
+libraries}\label{loading-required-libraries}
+
+Loading required libraries into R workspace
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(knitr)}
+\KeywordTok{library}\NormalTok{(DataExplorer) }\CommentTok{#For data exploration }
+\KeywordTok{library}\NormalTok{(psych)}
+\KeywordTok{library}\NormalTok{(corrplot) }\CommentTok{# For graphical correlations}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Reading CSV's}\label{reading-csvs}
+
+Reading the csv's as dataframes into R.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{setwd}\NormalTok{(}\StringTok{"/Users/chetanak/Box Sync/Projects/DataScience/R/house-prices-advanced-regression-techniques/"}\NormalTok{)}
+\NormalTok{train <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"train.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =}\NormalTok{ F)}
+\NormalTok{test <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"test.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =}\NormalTok{ F)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Data Exploration and
+Summary}\label{data-exploration-and-summary}
+
+\subsubsection{Data Structure}\label{data-structure}
+
+The test and train datasets have 1460 and 1459 rows each respectively.
+The test and train datasets have 81 and 80 columns each respectively. A
+difference in the columns variables across two data sets reveal absence
+of `SalePrice' predictor variable in test data. An `ID' column variable
+is too present in each of the datasets. However, this column is not
+essential in prediction rather this column in test data set is required
+for submission. Hence, saving the `test\$ID' values to a vector
+`test\_ids' and eliminating the `ID' column in both the datasets. We row
+bind the datasets for exploratory analysis. After binding, the combined
+data set contains 2919 and 80 columns. Of these 80, 79 are predictor
+variables and one is a response variable, which is `SalePrice'
+
+\begin{itemize}
+\tightlist
+\item
+  The data structure shows both character and integer variables with
+  null values on a few of those variables
+\item
+  The most of the character variables are ordinal factors, but I read
+  them as strings for data cleaning. We will see if converting any or
+  all of these factors is beneficial post cleaning.
+\item
+  A summary of the integer varaibles shows high skew and high kurtosis
+  values on a few variables indicating skewed data.
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{colnames}\NormalTok{(train)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  [1] "Id"            "MSSubClass"    "MSZoning"      "LotFrontage"  
+##  [5] "LotArea"       "Street"        "Alley"         "LotShape"     
+##  [9] "LandContour"   "Utilities"     "LotConfig"     "LandSlope"    
+## [13] "Neighborhood"  "Condition1"    "Condition2"    "BldgType"     
+## [17] "HouseStyle"    "OverallQual"   "OverallCond"   "YearBuilt"    
+## [21] "YearRemodAdd"  "RoofStyle"     "RoofMatl"      "Exterior1st"  
+## [25] "Exterior2nd"   "MasVnrType"    "MasVnrArea"    "ExterQual"    
+## [29] "ExterCond"     "Foundation"    "BsmtQual"      "BsmtCond"     
+## [33] "BsmtExposure"  "BsmtFinType1"  "BsmtFinSF1"    "BsmtFinType2" 
+## [37] "BsmtFinSF2"    "BsmtUnfSF"     "TotalBsmtSF"   "Heating"      
+## [41] "HeatingQC"     "CentralAir"    "Electrical"    "X1stFlrSF"    
+## [45] "X2ndFlrSF"     "LowQualFinSF"  "GrLivArea"     "BsmtFullBath" 
+## [49] "BsmtHalfBath"  "FullBath"      "HalfBath"      "BedroomAbvGr" 
+## [53] "KitchenAbvGr"  "KitchenQual"   "TotRmsAbvGrd"  "Functional"   
+## [57] "Fireplaces"    "FireplaceQu"   "GarageType"    "GarageYrBlt"  
+## [61] "GarageFinish"  "GarageCars"    "GarageArea"    "GarageQual"   
+## [65] "GarageCond"    "PavedDrive"    "WoodDeckSF"    "OpenPorchSF"  
+## [69] "EnclosedPorch" "X3SsnPorch"    "ScreenPorch"   "PoolArea"     
+## [73] "PoolQC"        "Fence"         "MiscFeature"   "MiscVal"      
+## [77] "MoSold"        "YrSold"        "SaleType"      "SaleCondition"
+## [81] "SalePrice"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{train[}\DecValTok{1}\OperatorTok{:}\DecValTok{3}\NormalTok{,}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\DecValTok{5}\NormalTok{,}\DecValTok{81}\NormalTok{)]  }\CommentTok{# displaying first 5 predictor variables and 'SalePrice' predictor variable}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   Id MSSubClass MSZoning LotFrontage LotArea SalePrice
+## 1  1         60       RL          65    8450    208500
+## 2  2         20       RL          80    9600    181500
+## 3  3         60       RL          68   11250    223500
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{colnames}\NormalTok{(test)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  [1] "Id"            "MSSubClass"    "MSZoning"      "LotFrontage"  
+##  [5] "LotArea"       "Street"        "Alley"         "LotShape"     
+##  [9] "LandContour"   "Utilities"     "LotConfig"     "LandSlope"    
+## [13] "Neighborhood"  "Condition1"    "Condition2"    "BldgType"     
+## [17] "HouseStyle"    "OverallQual"   "OverallCond"   "YearBuilt"    
+## [21] "YearRemodAdd"  "RoofStyle"     "RoofMatl"      "Exterior1st"  
+## [25] "Exterior2nd"   "MasVnrType"    "MasVnrArea"    "ExterQual"    
+## [29] "ExterCond"     "Foundation"    "BsmtQual"      "BsmtCond"     
+## [33] "BsmtExposure"  "BsmtFinType1"  "BsmtFinSF1"    "BsmtFinType2" 
+## [37] "BsmtFinSF2"    "BsmtUnfSF"     "TotalBsmtSF"   "Heating"      
+## [41] "HeatingQC"     "CentralAir"    "Electrical"    "X1stFlrSF"    
+## [45] "X2ndFlrSF"     "LowQualFinSF"  "GrLivArea"     "BsmtFullBath" 
+## [49] "BsmtHalfBath"  "FullBath"      "HalfBath"      "BedroomAbvGr" 
+## [53] "KitchenAbvGr"  "KitchenQual"   "TotRmsAbvGrd"  "Functional"   
+## [57] "Fireplaces"    "FireplaceQu"   "GarageType"    "GarageYrBlt"  
+## [61] "GarageFinish"  "GarageCars"    "GarageArea"    "GarageQual"   
+## [65] "GarageCond"    "PavedDrive"    "WoodDeckSF"    "OpenPorchSF"  
+## [69] "EnclosedPorch" "X3SsnPorch"    "ScreenPorch"   "PoolArea"     
+## [73] "PoolQC"        "Fence"         "MiscFeature"   "MiscVal"      
+## [77] "MoSold"        "YrSold"        "SaleType"      "SaleCondition"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{test[}\DecValTok{1}\OperatorTok{:}\DecValTok{3}\NormalTok{, }\KeywordTok{c}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\DecValTok{5}\NormalTok{,}\DecValTok{80}\NormalTok{)]  }\CommentTok{# displaying first 5 predictor variables and 'SalePrice' predictor variable}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##     Id MSSubClass MSZoning LotFrontage LotArea SaleCondition
+## 1 1461         20       RH          80   11622        Normal
+## 2 1462         20       RL          81   14267        Normal
+## 3 1463         60       RL          74   13830        Normal
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{cat}\NormalTok{(}\StringTok{"The training data set contains"}\NormalTok{, }\KeywordTok{nrow}\NormalTok{(train),}\StringTok{"and"}\NormalTok{,}\KeywordTok{ncol}\NormalTok{(train), }\StringTok{"columns"}\NormalTok{,}\DataTypeTok{sep=}\StringTok{" "}\NormalTok{,}\DataTypeTok{fill=}\OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## The training data set contains 1460 and 81 columns
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{cat}\NormalTok{(}\StringTok{"The test data set contains"}\NormalTok{, }\KeywordTok{nrow}\NormalTok{(test),}\StringTok{"and"}\NormalTok{,}\KeywordTok{ncol}\NormalTok{(test), }\StringTok{"columns"}\NormalTok{,}\DataTypeTok{sep=}\StringTok{" "}\NormalTok{,}\DataTypeTok{fill=}\OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## The test data set contains 1459 and 80 columns
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{cat}\NormalTok{(}\StringTok{"The test data set is missing a column #"}\NormalTok{, }\KeywordTok{setdiff}\NormalTok{(}\KeywordTok{names}\NormalTok{(train), }\KeywordTok{names}\NormalTok{(test)), }\DataTypeTok{sep=}\StringTok{" "}\NormalTok{,}\DataTypeTok{fill=}\OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## The test data set is missing a column # SalePrice
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{test_ids <-}\StringTok{ }\NormalTok{test}\OperatorTok{$}\NormalTok{Id}
+\NormalTok{train}\OperatorTok{$}\NormalTok{Id <-}\StringTok{ }\OtherTok{NULL}
+\NormalTok{test}\OperatorTok{$}\NormalTok{Id <-}\StringTok{ }\OtherTok{NULL}
+\NormalTok{test}\OperatorTok{$}\NormalTok{SalePrice <-}\StringTok{ }\OtherTok{NA}
+\NormalTok{df <-}\StringTok{ }\KeywordTok{rbind}\NormalTok{(train, test)}
+\KeywordTok{cat}\NormalTok{(}\StringTok{"The combined data set contains"}\NormalTok{, }\KeywordTok{nrow}\NormalTok{(df),}\StringTok{"and"}\NormalTok{,}\KeywordTok{ncol}\NormalTok{(df), }\StringTok{"columns"}\NormalTok{,}\DataTypeTok{sep=}\StringTok{" "}\NormalTok{,}\DataTypeTok{fill=}\OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## The combined data set contains 2919 and 80 columns
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{str}\NormalTok{(df)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 'data.frame':    2919 obs. of  80 variables:
+##  $ MSSubClass   : int  60 20 60 70 60 50 20 60 50 190 ...
+##  $ MSZoning     : chr  "RL" "RL" "RL" "RL" ...
+##  $ LotFrontage  : int  65 80 68 60 84 85 75 NA 51 50 ...
+##  $ LotArea      : int  8450 9600 11250 9550 14260 14115 10084 10382 6120 7420 ...
+##  $ Street       : chr  "Pave" "Pave" "Pave" "Pave" ...
+##  $ Alley        : chr  NA NA NA NA ...
+##  $ LotShape     : chr  "Reg" "Reg" "IR1" "IR1" ...
+##  $ LandContour  : chr  "Lvl" "Lvl" "Lvl" "Lvl" ...
+##  $ Utilities    : chr  "AllPub" "AllPub" "AllPub" "AllPub" ...
+##  $ LotConfig    : chr  "Inside" "FR2" "Inside" "Corner" ...
+##  $ LandSlope    : chr  "Gtl" "Gtl" "Gtl" "Gtl" ...
+##  $ Neighborhood : chr  "CollgCr" "Veenker" "CollgCr" "Crawfor" ...
+##  $ Condition1   : chr  "Norm" "Feedr" "Norm" "Norm" ...
+##  $ Condition2   : chr  "Norm" "Norm" "Norm" "Norm" ...
+##  $ BldgType     : chr  "1Fam" "1Fam" "1Fam" "1Fam" ...
+##  $ HouseStyle   : chr  "2Story" "1Story" "2Story" "2Story" ...
+##  $ OverallQual  : int  7 6 7 7 8 5 8 7 7 5 ...
+##  $ OverallCond  : int  5 8 5 5 5 5 5 6 5 6 ...
+##  $ YearBuilt    : int  2003 1976 2001 1915 2000 1993 2004 1973 1931 1939 ...
+##  $ YearRemodAdd : int  2003 1976 2002 1970 2000 1995 2005 1973 1950 1950 ...
+##  $ RoofStyle    : chr  "Gable" "Gable" "Gable" "Gable" ...
+##  $ RoofMatl     : chr  "CompShg" "CompShg" "CompShg" "CompShg" ...
+##  $ Exterior1st  : chr  "VinylSd" "MetalSd" "VinylSd" "Wd Sdng" ...
+##  $ Exterior2nd  : chr  "VinylSd" "MetalSd" "VinylSd" "Wd Shng" ...
+##  $ MasVnrType   : chr  "BrkFace" "None" "BrkFace" "None" ...
+##  $ MasVnrArea   : int  196 0 162 0 350 0 186 240 0 0 ...
+##  $ ExterQual    : chr  "Gd" "TA" "Gd" "TA" ...
+##  $ ExterCond    : chr  "TA" "TA" "TA" "TA" ...
+##  $ Foundation   : chr  "PConc" "CBlock" "PConc" "BrkTil" ...
+##  $ BsmtQual     : chr  "Gd" "Gd" "Gd" "TA" ...
+##  $ BsmtCond     : chr  "TA" "TA" "TA" "Gd" ...
+##  $ BsmtExposure : chr  "No" "Gd" "Mn" "No" ...
+##  $ BsmtFinType1 : chr  "GLQ" "ALQ" "GLQ" "ALQ" ...
+##  $ BsmtFinSF1   : int  706 978 486 216 655 732 1369 859 0 851 ...
+##  $ BsmtFinType2 : chr  "Unf" "Unf" "Unf" "Unf" ...
+##  $ BsmtFinSF2   : int  0 0 0 0 0 0 0 32 0 0 ...
+##  $ BsmtUnfSF    : int  150 284 434 540 490 64 317 216 952 140 ...
+##  $ TotalBsmtSF  : int  856 1262 920 756 1145 796 1686 1107 952 991 ...
+##  $ Heating      : chr  "GasA" "GasA" "GasA" "GasA" ...
+##  $ HeatingQC    : chr  "Ex" "Ex" "Ex" "Gd" ...
+##  $ CentralAir   : chr  "Y" "Y" "Y" "Y" ...
+##  $ Electrical   : chr  "SBrkr" "SBrkr" "SBrkr" "SBrkr" ...
+##  $ X1stFlrSF    : int  856 1262 920 961 1145 796 1694 1107 1022 1077 ...
+##  $ X2ndFlrSF    : int  854 0 866 756 1053 566 0 983 752 0 ...
+##  $ LowQualFinSF : int  0 0 0 0 0 0 0 0 0 0 ...
+##  $ GrLivArea    : int  1710 1262 1786 1717 2198 1362 1694 2090 1774 1077 ...
+##  $ BsmtFullBath : int  1 0 1 1 1 1 1 1 0 1 ...
+##  $ BsmtHalfBath : int  0 1 0 0 0 0 0 0 0 0 ...
+##  $ FullBath     : int  2 2 2 1 2 1 2 2 2 1 ...
+##  $ HalfBath     : int  1 0 1 0 1 1 0 1 0 0 ...
+##  $ BedroomAbvGr : int  3 3 3 3 4 1 3 3 2 2 ...
+##  $ KitchenAbvGr : int  1 1 1 1 1 1 1 1 2 2 ...
+##  $ KitchenQual  : chr  "Gd" "TA" "Gd" "Gd" ...
+##  $ TotRmsAbvGrd : int  8 6 6 7 9 5 7 7 8 5 ...
+##  $ Functional   : chr  "Typ" "Typ" "Typ" "Typ" ...
+##  $ Fireplaces   : int  0 1 1 1 1 0 1 2 2 2 ...
+##  $ FireplaceQu  : chr  NA "TA" "TA" "Gd" ...
+##  $ GarageType   : chr  "Attchd" "Attchd" "Attchd" "Detchd" ...
+##  $ GarageYrBlt  : int  2003 1976 2001 1998 2000 1993 2004 1973 1931 1939 ...
+##  $ GarageFinish : chr  "RFn" "RFn" "RFn" "Unf" ...
+##  $ GarageCars   : int  2 2 2 3 3 2 2 2 2 1 ...
+##  $ GarageArea   : int  548 460 608 642 836 480 636 484 468 205 ...
+##  $ GarageQual   : chr  "TA" "TA" "TA" "TA" ...
+##  $ GarageCond   : chr  "TA" "TA" "TA" "TA" ...
+##  $ PavedDrive   : chr  "Y" "Y" "Y" "Y" ...
+##  $ WoodDeckSF   : int  0 298 0 0 192 40 255 235 90 0 ...
+##  $ OpenPorchSF  : int  61 0 42 35 84 30 57 204 0 4 ...
+##  $ EnclosedPorch: int  0 0 0 272 0 0 0 228 205 0 ...
+##  $ X3SsnPorch   : int  0 0 0 0 0 320 0 0 0 0 ...
+##  $ ScreenPorch  : int  0 0 0 0 0 0 0 0 0 0 ...
+##  $ PoolArea     : int  0 0 0 0 0 0 0 0 0 0 ...
+##  $ PoolQC       : chr  NA NA NA NA ...
+##  $ Fence        : chr  NA NA NA NA ...
+##  $ MiscFeature  : chr  NA NA NA NA ...
+##  $ MiscVal      : int  0 0 0 0 0 700 0 350 0 0 ...
+##  $ MoSold       : int  2 5 9 2 12 10 8 11 4 1 ...
+##  $ YrSold       : int  2008 2007 2008 2006 2008 2009 2007 2009 2008 2008 ...
+##  $ SaleType     : chr  "WD" "WD" "WD" "WD" ...
+##  $ SaleCondition: chr  "Normal" "Normal" "Normal" "Abnorml" ...
+##  $ SalePrice    : int  208500 181500 223500 140000 250000 143000 307000 200000 129900 118000 ...
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{as.data.frame}\NormalTok{(}\KeywordTok{cbind}\NormalTok{(}\KeywordTok{lapply}\NormalTok{(df, class)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                      V1
+## MSSubClass      integer
+## MSZoning      character
+## LotFrontage     integer
+## LotArea         integer
+## Street        character
+## Alley         character
+## LotShape      character
+## LandContour   character
+## Utilities     character
+## LotConfig     character
+## LandSlope     character
+## Neighborhood  character
+## Condition1    character
+## Condition2    character
+## BldgType      character
+## HouseStyle    character
+## OverallQual     integer
+## OverallCond     integer
+## YearBuilt       integer
+## YearRemodAdd    integer
+## RoofStyle     character
+## RoofMatl      character
+## Exterior1st   character
+## Exterior2nd   character
+## MasVnrType    character
+## MasVnrArea      integer
+## ExterQual     character
+## ExterCond     character
+## Foundation    character
+## BsmtQual      character
+## BsmtCond      character
+## BsmtExposure  character
+## BsmtFinType1  character
+## BsmtFinSF1      integer
+## BsmtFinType2  character
+## BsmtFinSF2      integer
+## BsmtUnfSF       integer
+## TotalBsmtSF     integer
+## Heating       character
+## HeatingQC     character
+## CentralAir    character
+## Electrical    character
+## X1stFlrSF       integer
+## X2ndFlrSF       integer
+## LowQualFinSF    integer
+## GrLivArea       integer
+## BsmtFullBath    integer
+## BsmtHalfBath    integer
+## FullBath        integer
+## HalfBath        integer
+## BedroomAbvGr    integer
+## KitchenAbvGr    integer
+## KitchenQual   character
+## TotRmsAbvGrd    integer
+## Functional    character
+## Fireplaces      integer
+## FireplaceQu   character
+## GarageType    character
+## GarageYrBlt     integer
+## GarageFinish  character
+## GarageCars      integer
+## GarageArea      integer
+## GarageQual    character
+## GarageCond    character
+## PavedDrive    character
+## WoodDeckSF      integer
+## OpenPorchSF     integer
+## EnclosedPorch   integer
+## X3SsnPorch      integer
+## ScreenPorch     integer
+## PoolArea        integer
+## PoolQC        character
+## Fence         character
+## MiscFeature   character
+## MiscVal         integer
+## MoSold          integer
+## YrSold          integer
+## SaleType      character
+## SaleCondition character
+## SalePrice       integer
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{### Missing value counts per variable}
+
+\NormalTok{NAcol <-}\StringTok{ }\KeywordTok{which}\NormalTok{(}\KeywordTok{colSums}\NormalTok{(}\KeywordTok{is.na}\NormalTok{(df)) }\OperatorTok{>}\StringTok{ }\DecValTok{0}\NormalTok{)}
+\KeywordTok{sort}\NormalTok{(}\KeywordTok{colSums}\NormalTok{(}\KeywordTok{sapply}\NormalTok{(df[NAcol], is.na)), }\DataTypeTok{decreasing =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       PoolQC  MiscFeature        Alley        Fence    SalePrice 
+##         2909         2814         2721         2348         1459 
+##  FireplaceQu  LotFrontage  GarageYrBlt GarageFinish   GarageQual 
+##         1420          486          159          159          159 
+##   GarageCond   GarageType     BsmtCond BsmtExposure     BsmtQual 
+##          159          157           82           82           81 
+## BsmtFinType2 BsmtFinType1   MasVnrType   MasVnrArea     MSZoning 
+##           80           79           24           23            4 
+##    Utilities BsmtFullBath BsmtHalfBath   Functional  Exterior1st 
+##            2            2            2            2            1 
+##  Exterior2nd   BsmtFinSF1   BsmtFinSF2    BsmtUnfSF  TotalBsmtSF 
+##            1            1            1            1            1 
+##   Electrical  KitchenQual   GarageCars   GarageArea     SaleType 
+##            1            1            1            1            1
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#subset by numeric type and get a plot of correlation matrix on the data prior to clean up}
+\NormalTok{numeric_cols <-}\StringTok{ }\KeywordTok{unlist}\NormalTok{(}\KeywordTok{sapply}\NormalTok{(df, is.numeric))}
+\NormalTok{dfNum <-}\StringTok{ }\NormalTok{df[, numeric_cols]}
+\KeywordTok{describe}\NormalTok{(dfNum)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##               vars    n      mean       sd   median   trimmed      mad
+## MSSubClass       1 2919     57.14    42.52     50.0     49.47    44.48
+## LotFrontage      2 2433     69.31    23.34     68.0     68.44    17.79
+## LotArea          3 2919  10168.11  7887.00   9453.0   9499.49  3023.02
+## OverallQual      4 2919      6.09     1.41      6.0      6.07     1.48
+## OverallCond      5 2919      5.56     1.11      5.0      5.47     0.00
+## YearBuilt        6 2919   1971.31    30.29   1973.0   1974.19    37.06
+## YearRemodAdd     7 2919   1984.26    20.89   1993.0   1985.62    20.76
+## MasVnrArea       8 2896    102.20   179.33      0.0     61.41     0.00
+## BsmtFinSF1       9 2918    441.42   455.61    368.5    382.44   546.34
+## BsmtFinSF2      10 2918     49.58   169.21      0.0      1.90     0.00
+## BsmtUnfSF       11 2918    560.77   439.54    467.0    512.46   415.13
+## TotalBsmtSF     12 2918   1051.78   440.77    989.5   1034.98   350.63
+## X1stFlrSF       13 2919   1159.58   392.36   1082.0   1127.14   348.41
+## X2ndFlrSF       14 2919    336.48   428.70      0.0    274.21     0.00
+## LowQualFinSF    15 2919      4.69    46.40      0.0      0.00     0.00
+## GrLivArea       16 2919   1500.76   506.05   1444.0   1453.45   464.05
+## BsmtFullBath    17 2917      0.43     0.52      0.0      0.39     0.00
+## BsmtHalfBath    18 2917      0.06     0.25      0.0      0.00     0.00
+## FullBath        19 2919      1.57     0.55      2.0      1.56     0.00
+## HalfBath        20 2919      0.38     0.50      0.0      0.34     0.00
+## BedroomAbvGr    21 2919      2.86     0.82      3.0      2.84     0.00
+## KitchenAbvGr    22 2919      1.04     0.21      1.0      1.00     0.00
+## TotRmsAbvGrd    23 2919      6.45     1.57      6.0      6.34     1.48
+## Fireplaces      24 2919      0.60     0.65      1.0      0.52     1.48
+## GarageYrBlt     25 2760   1978.11    25.57   1979.0   1980.69    31.13
+## GarageCars      26 2918      1.77     0.76      2.0      1.77     0.00
+## GarageArea      27 2918    472.87   215.39    480.0    468.42   183.84
+## WoodDeckSF      28 2919     93.71   126.53      0.0     71.15     0.00
+## OpenPorchSF     29 2919     47.49    67.58     26.0     33.80    38.55
+## EnclosedPorch   30 2919     23.10    64.24      0.0      4.94     0.00
+## X3SsnPorch      31 2919      2.60    25.19      0.0      0.00     0.00
+## ScreenPorch     32 2919     16.06    56.18      0.0      0.00     0.00
+## PoolArea        33 2919      2.25    35.66      0.0      0.00     0.00
+## MiscVal         34 2919     50.83   567.40      0.0      0.00     0.00
+## MoSold          35 2919      6.21     2.71      6.0      6.15     2.97
+## YrSold          36 2919   2007.79     1.31   2008.0   2007.74     1.48
+## SalePrice       37 1460 180921.20 79442.50 163000.0 170783.29 56338.80
+##                 min    max  range  skew kurtosis      se
+## MSSubClass       20    190    170  1.37     1.45    0.79
+## LotFrontage      21    313    292  1.50    11.26    0.47
+## LotArea        1300 215245 213945 12.82   264.31  145.98
+## OverallQual       1     10      9  0.20     0.06    0.03
+## OverallCond       1      9      8  0.57     1.47    0.02
+## YearBuilt      1872   2010    138 -0.60    -0.51    0.56
+## YearRemodAdd   1950   2010     60 -0.45    -1.35    0.39
+## MasVnrArea        0   1600   1600  2.60     9.23    3.33
+## BsmtFinSF1        0   5644   5644  1.42     6.88    8.43
+## BsmtFinSF2        0   1526   1526  4.14    18.79    3.13
+## BsmtUnfSF         0   2336   2336  0.92     0.40    8.14
+## TotalBsmtSF       0   6110   6110  1.16     9.13    8.16
+## X1stFlrSF       334   5095   4761  1.47     6.94    7.26
+## X2ndFlrSF         0   2065   2065  0.86    -0.43    7.93
+## LowQualFinSF      0   1064   1064 12.08   174.51    0.86
+## GrLivArea       334   5642   5308  1.27     4.11    9.37
+## BsmtFullBath      0      3      3  0.62    -0.74    0.01
+## BsmtHalfBath      0      2      2  3.93    14.81    0.00
+## FullBath          0      4      4  0.17    -0.54    0.01
+## HalfBath          0      2      2  0.69    -1.04    0.01
+## BedroomAbvGr      0      8      8  0.33     1.93    0.02
+## KitchenAbvGr      0      3      3  4.30    19.73    0.00
+## TotRmsAbvGrd      2     15     13  0.76     1.16    0.03
+## Fireplaces        0      4      4  0.73     0.07    0.01
+## GarageYrBlt    1895   2207    312 -0.38     1.80    0.49
+## GarageCars        0      5      5 -0.22     0.23    0.01
+## GarageArea        0   1488   1488  0.24     0.93    3.99
+## WoodDeckSF        0   1424   1424  1.84     6.72    2.34
+## OpenPorchSF       0    742    742  2.53    10.91    1.25
+## EnclosedPorch     0   1012   1012  4.00    28.31    1.19
+## X3SsnPorch        0    508    508 11.37   149.05    0.47
+## ScreenPorch       0    576    576  3.94    17.73    1.04
+## PoolArea          0    800    800 16.89   297.91    0.66
+## MiscVal           0  17000  17000 21.94   562.72   10.50
+## MoSold            1     12     11  0.20    -0.46    0.05
+## YrSold         2006   2010      4  0.13    -1.16    0.02
+## SalePrice     34900 755000 720100  1.88     6.50 2079.11
+\end{verbatim}
+
+\subsubsection{Correlation Matrix}\label{correlation-matrix}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{#### Plot the correlations of all numeric variables ####}
+\NormalTok{cor_numVar <-}\StringTok{ }\KeywordTok{cor}\NormalTok{(dfNum, }\DataTypeTok{use=}\StringTok{"pairwise.complete.obs"}\NormalTok{) }\CommentTok{#correlations of all numeric variables}
+\CommentTok{#sort on decreasing correlations with SalePrice}
+\NormalTok{cor_sorted <-}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{(}\KeywordTok{sort}\NormalTok{(cor_numVar[,}\StringTok{'SalePrice'}\NormalTok{], }\DataTypeTok{decreasing =} \OtherTok{TRUE}\NormalTok{))}
+\CommentTok{#select only high corelations with Sales Price}
+\NormalTok{CorHigh <-}\StringTok{ }\KeywordTok{names}\NormalTok{(}\KeywordTok{which}\NormalTok{(}\KeywordTok{apply}\NormalTok{(cor_sorted, }\DecValTok{1}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(x) }\KeywordTok{abs}\NormalTok{(x)}\OperatorTok{>}\FloatTok{0.5}\NormalTok{)))}
+\NormalTok{cor_numVar <-}\StringTok{ }\NormalTok{cor_numVar[CorHigh, CorHigh]}
+\KeywordTok{corrplot.mixed}\NormalTok{(cor_numVar, }\DataTypeTok{tl.col=}\StringTok{"black"}\NormalTok{, }\DataTypeTok{tl.pos =} \StringTok{"lt"}\NormalTok{, }\DataTypeTok{upper=}\StringTok{"circle"}\NormalTok{, }\DataTypeTok{lower=}\StringTok{"number"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{asme_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+
+\end{document}
